@@ -7,12 +7,22 @@ bool debug = true;
 byte MAC[] = {0x00, 0xAA, 0xBB, 0xCC, 0xDE, 0x01}; //MAC adres karty sieciowej, to powinno byc unikatowe - proforma dla ebsim'a
 unsigned int localPort = UDP_SERVER_PORT;
 
- //odsyla wiadomosc do Copper
+
     
+int countDigit(long n){
+  int r = 0;
+  if(!n) return 1;
+  while(n > 0){
+    ++r;
+    n/=10;
+  }
+  return r;
+}
+
 
 //setup poczatkowy
 bool coapServer::start() {
-
+  
   ObirEthernet.begin(MAC);
   
   Serial.print(F("My IP address: "));
@@ -42,8 +52,10 @@ bool coapServer::loop() {
     cPacket.tokenlen = packetBuffer[0] & 15;
     cPacket.code = packetBuffer[1];
     cPacket.bitClass = packetBuffer[1] >> 5;
+    Serial.println("bitclass"); Serial.println(cPacket.bitClass);
     unsigned char temp = packetBuffer[1] >> 5;
     cPacket.bitCode = packetBuffer[1] ^ (temp << 5);
+    Serial.println("bitcode"); Serial.println(cPacket.bitCode);
     
     cPacket.messageId = (packetBuffer[2] << 8) | packetBuffer[3];     //łaczenie 2 bajtów
     
@@ -72,9 +84,9 @@ bool coapServer::loop() {
         cPacket.cOption[optionNumber].optionLength += packetBuffer[currentByte];
       }
       
-      Serial.print("delta");
+      Serial.print("Delta: ");
       Serial.println(cPacket.cOption[optionNumber].delta);
-      Serial.print("lenght");
+      Serial.print("Lenght: ");
       Serial.println(cPacket.cOption[optionNumber].optionLength);
       
       //reading option Value
@@ -95,21 +107,21 @@ bool coapServer::loop() {
         isNextOption = false;
       }
       optionNumber++;
-      Serial.println("LoOoOoOoP");
+      Serial.println("LoOoOoOoP....");
     }
 
     for(int i = 0 ; i < 5 ; i++){
-      Serial.print("Coap option nr :");
+      Serial.print("Coap option nr: ");
       Serial.print(i);
-      Serial.print(" delta of option: ");
+      Serial.print("Delta of option: ");
       Serial.print(cPacket.cOption[i].delta);
-      Serial.print(" lenght of option value is :");  
+      Serial.print("Lenght of option value is :");  
       Serial.print(cPacket.cOption[i].optionLength);
       Serial.println();
     }
     Serial.print("Size od udp");
     Serial.println(packetSize);
-    Serial.print("current Byte");
+    Serial.print("Current Byte");
     Serial.println(currentByte);
     
     //handling payload
@@ -129,7 +141,19 @@ bool coapServer::loop() {
         ++i;
       }
     
-   
+   //handling GET request
+   if(cPacket.bitClass == 0 && cPacket.bitCode == 1){
+      Serial.println("Dostałem GET request");
+      long n = 12;
+      byte passOptions[] = { 0b1100 << 4 | 0b1, 0b0,
+                             0b1011 << 4 | 0b1, 0b10,
+                             0b0101 << 4 | 0b1, (byte)(countDigit(n) + 1)
+                           };
+      sendResponse(passOptions, sizeof(passOptions),"69420",sizeof("69420"), 2,5, cPacket.messageId); //wysyłanie payloadu z powrotem (tymczasowo)
+      
+
+    
+    };
   
   //testy se robimy a co
   if (debug) {

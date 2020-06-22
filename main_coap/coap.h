@@ -15,6 +15,9 @@ struct payload_t {
   unsigned short type; //typ przenoszonej wiadomosci
 };
 
+//liczenie cyfr zawartych w 'n'
+
+//klasa przechowująca delte i dlugość opcji
 class coapOption{
   public:
   uint8_t delta = 0;
@@ -22,7 +25,7 @@ class coapOption{
   uint8_t *optionValue;
 };
 
-
+//Klasa przechowująca dane pakietu
 class coapPacket{
   public:
   uint8_t coapVersion;
@@ -38,7 +41,7 @@ class coapPacket{
   char payload[5]; 
   byte bitClass; //req\response class
   byte bitCode; //req\response code
-  //void sendResponse(byte options[]=NULL, int optionsSize=0, char payload[]=NULL, int payloadSize=0, byte c=0, byte dd=0, bool isObs = false);
+  
   
 
   
@@ -46,6 +49,7 @@ class coapPacket{
   
 };
 
+//klasa serwera zajmująca się przechowywaniem buforów, komunikacją oraz zawierająca główną pętle programu
 class coapServer{
   public:
   ObirEthernetUDP Udp;
@@ -53,16 +57,18 @@ class coapServer{
   unsigned char packetMessage[PACKET_BUFFER_LENGTH]; 
   bool start();
   bool loop();
-
-  void sendResponse(byte options[]=NULL, int optionsSize=0, char payload[]=NULL, int payloadSize=0, byte c=0, byte dd=0,  uint8_t coapVersion = 0, uint8_t tokenlen = 0 ){
+  
+//  Odsyła wiadomość do Copper'a
+  void sendResponse(byte options[]=NULL, int optionsSize=0, char payload[]=NULL, int payloadSize=0, byte c=0, byte dd=0, uint16_t MID = 0,  uint8_t coapVersion = 1, uint8_t tokenlen = 0 ){
       byte responseMessage[256 + 12]; // inicjalizacja tablicy do utworzenia wiadomosci
       uint16_t midCounter = 0;
 
       
-      responseMessage[0] = coapVersion << 6 | 0b1 << 4 | tokenlen; //ustawienie wartosci pierwszego bajtu
+      responseMessage[0] = coapVersion << 6 | 0b10 << 4 | tokenlen; //ustawienie wartosci pierwszego bajtu
+      //responseMessage[0] = 0b0110 | tokenlen;
       responseMessage[1] = c << 5 | dd; // ustawienie pola code
-      responseMessage[2] = midCounter >> 8; //ustawienie bajtu mid
-      responseMessage[3] = midCounter; //ustawienie bajtu mid
+      responseMessage[2] = MID >> 8; //ustawienie bajtu mid
+      responseMessage[3] = MID; //ustawienie bajtu mid
       
       midCounter += 1; //inkrementacja mid wiadomosci
       
