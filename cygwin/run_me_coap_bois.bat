@@ -5,5 +5,4 @@ PATH=./dll-win10;%PATH%%
 
 @rem Exe simulation
 @echo "Run simulation"
-EBSimUnoEth.exe -ip 192.168.1.36 C:\Users\adams\Desktop\Obirr\cygwin\main_coap.ino.hex
-pause
+EBSimUnoEth.exe -ip 192.168.0.192 .//main_coap.ino.hex
