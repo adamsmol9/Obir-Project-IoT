@@ -5,4 +5,4 @@ PATH=./dll-win10;%PATH%%
 
 @rem Exe simulation
 @echo "Run simulation"
-EBSimUnoEth.exe -ip 192.168.0.192 C:\Users\Michal\AppData\Local\Temp\arduino_build_871628\main_coap.ino.hex
+EBSimUnoEth.exe -ip 192.168.0.192 C:\Users\Michal\AppData\Local\Temp\arduino_build_485994\main_coap.ino.hex
