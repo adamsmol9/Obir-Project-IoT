@@ -3,12 +3,14 @@
 
 #define PACKET_BUFFER_LENGTH        100
 #define UDP_SERVER_PORT 1234
+
 bool debug = true;
-byte MAC[] = {0x00, 0xAA, 0xBB, 0xCC, 0xDE, 0x01}; //MAC adres karty sieciowej, to powinno byc unikatowe - proforma dla ebsim'a
-unsigned int localPort = UDP_SERVER_PORT;
+byte MAC[] = {0x00, 0xAA, 0xBB, 0xCC, 0xDE, 0x01}; // MAC adres karty sieciowej
+unsigned int localPort = UDP_SERVER_PORT; // przypisanie portu
 
-
-    
+/**
+ * Liczenie cyfr zawartych w 'n'
+ */
 int countDigit(long n){
   int r = 0;
   if(!n) return 1;
@@ -19,8 +21,9 @@ int countDigit(long n){
   return r;
 }
 
-
-//setup poczatkowy
+/**
+ * Setup początkowy - Inicjacja biblioteki Ethernet, UDP i ustawień sieciowych
+ */
 bool coapServer::start() {
   
   ObirEthernet.begin(MAC);
@@ -33,43 +36,50 @@ bool coapServer::start() {
   Udp.begin(localPort);
 }
 
-//glowna petla serwera
+/**
+ * Główna wykonywalna pętla aplikacji serwera
+ */
 bool coapServer::loop() {
   
-  int packetSize = Udp.parsePacket();
-  if (packetSize > 0) {
-    Serial.println("Packet size ");
-    Serial.println((char*)packetSize);
-    int len = Udp.read(packetBuffer, PACKET_BUFFER_LENGTH);
-    Serial.print("Received: ");
-    packetBuffer[len] = '\0';
-    packetMessage[len] = '\0';
-    Serial.println((char*)packetBuffer);
-   
+  int packetSize = Udp.parsePacket();   // pobranie długości otrzymanego pakietu
+  if (packetSize > 0) {   // obsługa pakietu, jezeli odebrany pakiet jest niepusty
+    Serial.println("Packet size: ");
+    Serial.println(packetSize);  // wyświetlenie długości pakietu
+    int len = Udp.read(packetBuffer, PACKET_BUFFER_LENGTH);   // DOPISAC @TODO
+    Serial.print("Received: ");   // DOPISAC @TODO
+    packetBuffer[len] = '\0';   // DOPISAC @TODO
+    packetMessage[len] = '\0';    // DOPISAC @TODO
+    Serial.println((char*)packetBuffer);    // DOPISAC @TODO
+
+
+    // zczytywanie danych z wiadomości Coapa
     coapPacket cPacket;
-    cPacket.coapVersion = packetBuffer[0] & 196 >> 6;
-    cPacket.type = packetBuffer[0] & 48 >> 4;
-    cPacket.tokenlen = packetBuffer[0] & 15;
-    cPacket.code = packetBuffer[1];
-    cPacket.bitClass = packetBuffer[1] >> 5;
-    Serial.println("bitclass"); Serial.println(cPacket.bitClass);
-    unsigned char temp = packetBuffer[1] >> 5;
-    cPacket.bitCode = packetBuffer[1] ^ (temp << 5);
-    Serial.println("bitcode"); Serial.println(cPacket.bitCode);
+    cPacket.coapVersion = packetBuffer[0] & 196 >> 6;   // zczytywanie wersji 
+    cPacket.type = packetBuffer[0] & 48 >> 4;   // zczytywanie pola typ
+    cPacket.tokenlen = packetBuffer[0] & 15;    // zczytywanie dlugosci tokena
+    cPacket.code = packetBuffer[1];   // zczytywanie klasy pola kod
+    cPacket.bitClass = packetBuffer[1] >> 5;    // zczytywanie detali pola kod
     
-    cPacket.messageId = (packetBuffer[2] << 8) | packetBuffer[3];     //łaczenie 2 bajtów
+    Serial.print("BitClass: "); Serial.println(cPacket.bitClass);   // wyświetlenie detali pola kod
+    unsigned char temp = packetBuffer[1] >> 5;    // zapisanie do zmiennej tymczasowej detali pola kod
+    cPacket.bitCode = packetBuffer[1] ^ (temp << 5);    // zczytanie szczegółów pola kod
+    Serial.print("BitCode: "); Serial.println(cPacket.bitCode);   // wyświetlenie szczegółów pola kod  
     
-    //obsluga tokena
+    cPacket.messageId = (packetBuffer[2] << 8) | packetBuffer[3];   // łączenie 2 bajtów (Message ID zajmuje łącznie 2 bajty)
+    
+    // obsluga tokena // DOPISAC @TODO
     if (cPacket.tokenlen > 0) {
-      uint8_t token = new uint8_t[cPacket.tokenlen]; //uwaga moze nie byc dobrze - tkl to nie token morddy
+      uint8_t token = new uint8_t[cPacket.tokenlen]; //uwaga moze nie byc dobrze - tkl to nie token morddy // DOPISAC @TODO
     } else {
       uint8_t token = NULL;
     }
     
-    //obsługa opcji - iterujemy po byte opcji
-    int optionNumber = 0;
+    //obsługa opcji - iterujemy się po bitach opcji
+    int optionNumber = 0;   // aktualna wartość opcji
     bool isNextOption = true;
-    int currentByte = 4 + cPacket.tokenlen;
+    int currentByte = 4 + cPacket.tokenlen;   // indeks opcji
+
+    // petla do zczytywania opcji
     while (isNextOption) {
       cPacket.cOption[optionNumber].delta = packetBuffer[currentByte] & 244 >> 4;
       cPacket.cOption[optionNumber].optionLength = packetBuffer[currentByte] & 15;
@@ -89,7 +99,7 @@ bool coapServer::loop() {
       Serial.print("Lenght: ");
       Serial.println(cPacket.cOption[optionNumber].optionLength);
       
-      //reading option Value
+      // zczytywanie wartości opcji
       currentByte++;
       if (cPacket.cOption[optionNumber].optionLength > 0) {
         cPacket.cOption[optionNumber].optionValue = new uint8_t[cPacket.cOption[optionNumber].optionLength];
@@ -99,32 +109,35 @@ bool coapServer::loop() {
         }
       }
       
-      //checking if there are more options
+      // sprawdzenie czy są jeszcze dalsze opcje
       if (packetBuffer[currentByte] == NULL) {
         isNextOption = false;
       }
+      
       if (packetBuffer[currentByte] == 255) {
         isNextOption = false;
       }
       optionNumber++;
-      Serial.println("LoOoOoOoP....");
+      Serial.println("Wyjście z pętli LoOoOoOoP, która sprawdza opcje");
     }
 
+    // Wyświetlenie opcji wiadomości Coap
     for(int i = 0 ; i < 5 ; i++){
       Serial.print("Coap option nr: ");
       Serial.print(i);
-      Serial.print("Delta of option: ");
+      Serial.print(" Delta of option: ");
       Serial.print(cPacket.cOption[i].delta);
-      Serial.print("Lenght of option value is :");  
+      Serial.print(" Lenght of option value is: ");  
       Serial.print(cPacket.cOption[i].optionLength);
       Serial.println();
     }
-    Serial.print("Size od udp");
+    Serial.print("Size od udp: ");
     Serial.println(packetSize);
-    Serial.print("Current Byte");
+    Serial.print("Current Byte: ");
     Serial.println(currentByte);
+
     
-    //handling payload
+    // Obsługa payload'u
     int i =0;
     
        while(i < packetSize){
@@ -134,42 +147,40 @@ bool coapServer::loop() {
             ++i;
             cPacket.payload[j] = packetBuffer[i]; //zapisanie bajtu payloadu do struktury
             ++j;
-            if((cPacket.payload[j] != '\0') and (cPacket.payload[j] > '9' or cPacket.payload[j] < '0' or j > 5)){ //payload nie musi by liczba i miec mniej niz 5 cyf
+            if((cPacket.payload[j] != '\0') and (cPacket.payload[j] > '9' or cPacket.payload[j] < '0' or j > 5)){ 
             }
           }
         }
         ++i;
       }
     
-   //handling GET request
-   if(cPacket.bitClass == 0 && cPacket.bitCode == 1){
-      Serial.println("Dostałem GET request");
+   // obsługa żądania GET
+   if(cPacket.bitClass == 0 && cPacket.bitCode == 1){ // 01 to bity w polu 'Code' odpowiedzialne za wiadomość GET
+      Serial.println("Dostałem żądanie GET");
       long n = 12;
       byte passOptions[] = { 0b1100 << 4 | 0b1, 0b0,
                              0b1011 << 4 | 0b1, 0b10,
                              0b0101 << 4 | 0b1, (byte)(countDigit(n) + 1)
                            };
+                           
       sendResponse(passOptions, sizeof(passOptions),"69420",sizeof("69420"), 2,5, cPacket.messageId); //wysyłanie payloadu z powrotem (tymczasowo)
-      
-
-    
-    };
+   };
   
-  //testy se robimy a co
+  // Wyświetlenie wszystkich parametrów wiadomości CoAPa
   if (debug) {
     Serial.println();
   }
-  Serial.print("coapver ");
+  Serial.print("CoAP Version: ");
   Serial.println(cPacket.coapVersion);
-  Serial.print("code ");
+  Serial.print("CoAP Code: ");
   Serial.println(cPacket.code);
-  Serial.print("tokenlen ");
+  Serial.print("CoAP TokenLength: ");
   Serial.println(cPacket.tokenlen);
-  Serial.print("type ");
-  Serial.println(+cPacket.type);
-  Serial.print("messageId ");
+  Serial.print("CoAP MessageType: ");
+  Serial.println(cPacket.type);
+  Serial.print("CoAP MessageID: ");
   Serial.println(cPacket.messageId);
-  Serial.println("payload");
+  Serial.println("CoAP Payload: ");
   Serial.println(cPacket.payload);
  
 }
