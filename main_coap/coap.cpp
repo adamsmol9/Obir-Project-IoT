@@ -163,9 +163,34 @@ bool coapServer::loop() {
                              0b0101 << 4 | 0b1, (byte)(countDigit(n) + 1)
                            };
                            
-      sendResponse(passOptions, sizeof(passOptions),"69420",sizeof("69420"), 2,5, cPacket.messageId); //wysyłanie payloadu z powrotem (tymczasowo)
+      sendResponse(passOptions, sizeof(passOptions), "69420", sizeof("69420"), 2, 5, cPacket.messageId); //wysyłanie payloadu z powrotem (tymczasowo)
    };
+
+
   
+    //obsluga rodzaju wiadomosci DISCOVER (BRAKUJE WARUNKU W IF)
+    if(cPacket.bitClass == 0 && cPacket.bitCode == 1){
+      Serial.println("Dostałem żądanie DISCOVER");
+      char discoverPayload1[] = "</button>;obs;rt=\"observe\",</light>;title=\"Light which can be";
+      char discoverPayload2[] = "set to 0-100\";</stats>;";
+      byte passOptionsD1[] = { 0b100 << 4 |0b1, 0b1111111,//etag
+                               0b1000 << 4 | 0b1, 0b101000, //content-format
+                               0b1011 << 4 | 0b1, 0b1010, //block2
+                               0b0101 << 4 | 0b1, (byte)sizeof(discoverPayload1) + (byte)sizeof(discoverPayload2)}; //size2
+                               
+      byte passOptionsD2[] = { 0b100 << 4 |0b1, 0b1111111, //etag
+                               0b1000 << 4 | 0b1, 0b101000, //content-format
+                               0b1011 << 4 | 0b1, 0b100010, //block2
+                               0b0101 << 4 | 0b1, (byte)sizeof(discoverPayload2) + (byte)sizeof(discoverPayload1)}; //size2
+      Serial.println(discoverPayload1);
+      Serial.println(discoverPayload2);
+      sendResponse(passOptionsD1, sizeof(passOptionsD1), discoverPayload1, sizeof(discoverPayload1), 2, 5, cPacket.messageId); //odeslij 64 bajty wiadomosci
+      sendResponse(passOptionsD2, sizeof(passOptionsD2), discoverPayload2, (byte)sizeof(discoverPayload2), 2, 5); //odeslij reszte wiadomosci
+    }
+
+  }
+  
+  /*
   // Wyświetlenie wszystkich parametrów wiadomości CoAPa
   if (debug) {
     Serial.println();
@@ -182,6 +207,5 @@ bool coapServer::loop() {
   Serial.println(cPacket.messageId);
   Serial.println("CoAP Payload: ");
   Serial.println(cPacket.payload);
- 
-}
+  */
 }
